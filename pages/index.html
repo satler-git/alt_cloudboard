@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <title>Cloud Board - β</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="stylesheet" href="/style.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script>
+      $(function () {
+        var socket = io();
+        var grade;
+        var getting = true;
+        $(document).on('click', 'button', function () {
+          var id = $(this).attr('id');
+          var clss = $(this).attr('class').split(' ');
+          console.log(clss);
+          if (!clss.includes('cant') && !getting) {
+            if (id == 'back') {
+              //back
+              var gnum = Number(grade.split('g')[1]) - 1;
+              $('.grade').text(gnum + '年');
+              getting = true;
+              socket.emit('getResponses');
+              $('.responses').html('読み込み中...');
+              grade = 'g' + gnum;
+              $('#forward').removeClass('cant');
+              if (gnum == 1) $('#back').addClass('cant');
+            }
+
+            if (id == 'forward') {
+              //forward
+              var gnum = Number(grade.split('g')[1]) + 1;
+              $('.grade').text(gnum + '年');
+              getting = true;
+              socket.emit('getResponses');
+              $('.responses').html('読み込み中...');
+              grade = 'g' + gnum;
+              $('#back').removeClass('cant');
+              if (gnum == 3) $('#forward').addClass('cant');
+            }
+
+            if (id == "submit") {
+              //submit
+              var msg = $('#msg').val();
+              var user = $('#user').val();
+              if (msg == "" || user == "") {
+                alert("空欄を埋めてから送信してください！");
+                return;
+              }
+              $('#msg').val('');
+              $('#user').val('');
+              socket.emit('submit',msg,user);
+            }
+          }
+        });
+
+        socket.on('load', (d) => {
+          console.log(d);
+          if (grade == null) grade = 'g1';
+          var data = d[grade];
+          console.log(data);
+          $('.responses').html('');
+          for (let i = 0; i < data.length; i++) {
+            var content = data[i][0];
+            var user = data[i][1];
+            var deadline = data[i][2];
+
+            $('.responses').append(`
+              <li class="response">
+                <div class="res-contents">${content}</div>
+                <div class="res-right">
+                  <div class="res-user">${user}</div>
+                  <div class="res-deadline">表示期限: ${deadline}</div>
+                </div>
+              </li>
+            `);
+          }
+          getting = false;
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <div class="top">
+      <div class="control">
+        <button class="back cant" id="back"></button>
+        <label class="grade">1年</label>
+        <button class="forward" id="forward"></button>
+      </div>
+      <ul class="responses"></ul>
+      <div class="write">
+        <textarea placeholder="内容" class="wrt-msg" id="msg"></textarea>
+        <input placeholder="年組 名前" id="user"></input>
+        <button class="wrt-btn" id="submit">送信</button>
+      </div>
+    </div>
+  </body>
+</html>
